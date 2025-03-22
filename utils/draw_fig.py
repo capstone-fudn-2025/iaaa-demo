@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-def draw_fig(figsize=(15, 5), title="", save_path=None, is_show_fig=True, **kwargs):
+def draw_fig(figsize=(15, 5), title="", save_path=None, is_show_fig=False, **kwargs):
     plt.figure(figsize=figsize)
     for key, value in kwargs.items():
         plt.plot(value, label=key)

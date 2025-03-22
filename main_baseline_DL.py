@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -10,33 +11,44 @@ from utils.draw_fig import draw_fig
 from utils.preprocessing import Preprocessing
 
 # Define the 1D CNN model using PyTorch
-class CNN1D(nn.Module):
-    def __init__(self, window_size, hidden_channels=128, kernel_size=3):
-        super(CNN1D, self).__init__()
-        self.conv1 = nn.Conv1d(1, hidden_channels, kernel_size=kernel_size, padding=kernel_size//2)
-        self.relu = nn.ReLU()
-        self.conv2 = nn.Conv1d(hidden_channels, hidden_channels, kernel_size=kernel_size, padding=kernel_size//2)
-        self.flatten = nn.Flatten()
-        self.fc = nn.Linear(hidden_channels * window_size, 1)
+class Attention(nn.Module):
+    name = "Attention"
+    def __init__(self, window_size, hidden_channels=64):
+        super(Attention, self).__init__()
+        self.window_size = window_size
+        self.hidden_channels = hidden_channels
         
+        # Embedding layer
+        self.embedding = nn.Linear(window_size, hidden_channels)
+        self.attention = nn.MultiheadAttention(hidden_channels, num_heads=1)
+        self.fc_1 = nn.Linear(hidden_channels, 2 * hidden_channels)
+        self.fc_2 = nn.Linear(2 * hidden_channels, 1)
+        
+        # Device
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.to(self.device)
+
     def forward(self, x):
-        # Input shape: [batch_size, sequence_length]
-        # Reshape for Conv1d: [batch_size, channels, sequence_length]
-        x = x.unsqueeze(1)  # Add channel dimension
-        x = self.relu(self.conv1(x))
-        x = self.relu(self.conv2(x))
-        x = self.flatten(x)
-        x = self.fc(x)
-        return x.squeeze()
+        x = x.to(self.device)
+        x = self.embedding(x)
+        x, _ = self.attention(x, x, x)
+        x = self.fc_1(x)
+        x = nn.ReLU()(x)
+        x = self.fc_2(x)
+        return x.squeeze(-1)
 
 def find_nan_gap(data):
     """To find nan gap from data and return the start and end index of the gap.
     Args:
-        data (np.ndarray): The data to be processed.
+        data (np.ndarray or pd.Series): The data to be processed.
     
     Returns:
         list: The list (start, end) index of the gap.
     """
+    # Convert data to numpy array if it's a pandas Series
+    if isinstance(data, pd.Series):
+        data = data.values
+    
     # Convert the data to a boolean mask where True indicates NaN
     is_nan = np.isnan(data)
     
@@ -92,12 +104,12 @@ def train_forward_model(data, window_size, model):
     X, y = create_windows(data, window_size)
     
     # Convert to PyTorch tensors
-    X_tensor = torch.FloatTensor(X)
-    y_tensor = torch.FloatTensor(y)
+    X_tensor = torch.FloatTensor(X).to(model.device)
+    y_tensor = torch.FloatTensor(y).to(model.device)
     
     # Create dataset and dataloader
     dataset = TensorDataset(X_tensor, y_tensor)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
     
     # Define loss and optimizer
     criterion = nn.MSELoss()
@@ -143,16 +155,16 @@ def train_backward_model(data, window_size, model):
     X, y = create_windows(data, window_size)
     
     # Convert to PyTorch tensors
-    X_tensor = torch.FloatTensor(X)
-    y_tensor = torch.FloatTensor(y)
+    X_tensor = torch.FloatTensor(X).to(model.device)
+    y_tensor = torch.FloatTensor(y).to(model.device)
     
     # Create dataset and dataloader
     dataset = TensorDataset(X_tensor, y_tensor)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
     
     # Define loss and optimizer
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     
     # Train the model
     model.train()
@@ -198,10 +210,10 @@ def predict_gap_forward(data_before_gap, gap_size, window_size, model):
     with torch.no_grad():  # No need to track gradients
         for _ in range(gap_size):
             # Convert to tensor for prediction
-            X_pred = torch.FloatTensor(current_window).unsqueeze(0)  # Add batch dimension
+            X_pred = torch.FloatTensor(current_window).unsqueeze(0).to(model.device)  # Add batch dimension
             
             # Make prediction
-            pred = model(X_pred).item()
+            pred = model(X_pred).cpu().item()
             predictions.append(pred)
             
             # Update window for next prediction
@@ -232,10 +244,10 @@ def predict_gap_backward(data_after_gap, gap_size, window_size, model):
     with torch.no_grad():  # No need to track gradients
         for _ in range(gap_size):
             # Convert to tensor for prediction
-            X_pred = torch.FloatTensor(current_window).unsqueeze(0)  # Add batch dimension
+            X_pred = torch.FloatTensor(current_window).unsqueeze(0).to(model.device)  # Add batch dimension
             
             # Make prediction
-            pred = model(X_pred).item()
+            pred = model(X_pred).cpu().item()
             predictions.append(pred)
             
             # Update window for next prediction
@@ -319,7 +331,7 @@ def imputed_missing_gaps(data, window_size=7, min_gap_size=5, combination_method
             print(f"Training forward model for gap of size {gap_size}")
 
             # Initialize 1D CNN model for forward prediction
-            forward_model = CNN1D(window_size=window_size).to(device)
+            forward_model = Attention(window_size=window_size).to(device)
             
             # Train forward model
             forward_model_trained = train_forward_model(data_before_gap, window_size, forward_model)
@@ -332,7 +344,7 @@ def imputed_missing_gaps(data, window_size=7, min_gap_size=5, combination_method
             print(f"Training backward model for gap of size {gap_size}")
             
             # Initialize 1D CNN model for backward prediction
-            backward_model = CNN1D(window_size=window_size).to(device)
+            backward_model = Attention(window_size=window_size).to(device)
             
             # Train backward model (reverse the data first)
             reversed_data_after_gap = data_after_gap[::-1].copy()  # Create explicit copy to avoid negative strides
@@ -377,36 +389,46 @@ if __name__ == "__main__":
     # Set PyTorch device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
-
+    os.makedirs('plots', exist_ok=True)
+    
     # Load data
     dataframe = pd.read_csv('data/CAF003.csv')
-    univariate_raw_data = dataframe[['VW_30cm']]
+    # Drop unnecessary columns
+    dataframe = dataframe.drop(columns=['Location', 'Date'])
+    for col in dataframe.columns:
+        univariate_raw_data = dataframe[[col]]
+        print(f"Imputing missing values for column: {col}")
+        
+        # Preprocessing data
+        preprocessing = Preprocessing()
+        preprocessed_data = preprocessing.flow(univariate_raw_data)
+        # univariate_raw_data = preprocessed_data[col]
+        data = deepcopy(preprocessed_data[col].values)
+        
+        # Run imputation with 1D CNN models
+        imputed_data = imputed_missing_gaps(
+            data,
+            combination_method=COMBINATION_METHOD,
+            window_size=WINDOW_SIZE,
+            min_gap_size=MIN_GAP_SIZE,
+            device=device
+        )
     
-    # Preprocessing data
-    preprocessing = Preprocessing()
-    preprocessed_data = preprocessing.flow(univariate_raw_data)
-    univariate_raw_data = preprocessed_data['VW_30cm'].to_numpy()
-    data = deepcopy(univariate_raw_data)
-    
-    # Run imputation with 1D CNN models
-    imputed_data = imputed_missing_gaps(
-        data,
-        combination_method=COMBINATION_METHOD,
-        window_size=WINDOW_SIZE,
-        min_gap_size=MIN_GAP_SIZE,
-        device=device
-    )
+        # Revert preprocessing
+        imputed_data = preprocessing.reverse_flow(pd.DataFrame(imputed_data, columns=[col]))[col].values
 
-    # Optional: Visualize the results
-    draw_fig(
-        imputed_data=imputed_data,
-        original_data=univariate_raw_data,
-        title=f"Gap Imputation - Combination Method: {COMBINATION_METHOD} - Model: 1D CNN",
-    )
-    
-    # # Save the imputed data
-    # dataframe = pd.read_csv('data/CAF003.csv')
-    # dataframe['VW_30cm_imputed'] = imputed_data
-    # dataframe.to_csv('data/CAF003_imputed.csv', index=False)
-    
+        # Optional: Visualize the results
+        draw_fig(
+            imputed_data=imputed_data,
+            original_data=univariate_raw_data,
+            title=f"Gap Imputation - Combination Method: {COMBINATION_METHOD} - {col} - Model: Attention",
+            save_path=f"plots/imputation_{col}.png",
+            is_show_fig=False
+        )
+        
+        # Save the temporarily imputed data
+        dataframe[col] = imputed_data
+        # If not exist file, create new file else append to existing file
+        dataframe.to_csv('data/CAF003_imputed.csv', index=False)        
+            
     print("Imputation completed and saved to data/CAF003_imputed.csv")

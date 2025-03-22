@@ -1,4 +1,6 @@
 import numpy as np
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
 
 def similarity(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
@@ -135,3 +137,45 @@ def fa2(y_true: np.ndarray, y_pred: np.ndarray, upper_bound: float = 2.0, lower_
     # Avoid division by zero by adding small epsilon where y_true is zero
     ratio = np.divide(y_pred, y_true, out=np.zeros_like(y_pred), where=y_true!=0)
     return np.mean((ratio >= lower_bound) & (ratio <= upper_bound))
+
+
+def calculate_metrics(original_data, imputed_data, gaps=None):
+    """
+    Calculate evaluation metrics for imputation.
+    
+    Args:
+        original_data (np.ndarray or pd.Series): The original data without gaps (ground truth).
+        imputed_data (np.ndarray or pd.Series): The imputed data.
+        gaps (list, optional): List of (start, end) pairs indicating the gaps.
+        
+    Returns:
+        dict: Dictionary of evaluation metrics.
+    """
+    # Convert to numpy arrays if they are pandas Series
+    if isinstance(original_data, pd.Series):
+        original_data = original_data.values
+    if isinstance(imputed_data, pd.Series):
+        imputed_data = imputed_data.values
+    
+    # If gaps are provided, only evaluate at gap positions
+    if gaps:
+        mask = np.zeros_like(original_data, dtype=bool)
+        for start, end in gaps:
+            mask[start:end] = True
+        
+        original_gaps = original_data[mask]
+        imputed_gaps = imputed_data[mask]
+    else:
+        # Otherwise, use only non-NaN values for evaluation
+        mask = ~np.isnan(original_data)
+        original_gaps = original_data[mask]
+        imputed_gaps = imputed_data[mask]
+    
+    # Calculate metrics
+    metrics = {
+        'RMSE': np.sqrt(mean_squared_error(original_gaps, imputed_gaps)),
+        'MAE': mean_absolute_error(original_gaps, imputed_gaps),
+        'R2': r2_score(original_gaps, imputed_gaps)
+    }
+    
+    return metrics

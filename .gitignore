@@ -139,3 +139,5 @@ results/
 checkpoints/
 
 *.ipynb
+
+outputs/
