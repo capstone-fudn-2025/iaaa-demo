@@ -7,7 +7,7 @@ class DLTrainer(BaseTrainer):
     """
     Trainer for deep learning models (PyTorch).
     """
-    def __init__(self, window_size=7, batch_size=32, num_epochs=50, learning_rate=0.001, weight_decay=1e-5, min_epochs=10, patience=5):
+    def __init__(self, window_size=7, batch_size=32, num_epochs=200, learning_rate=0.001, weight_decay=1e-5, min_epochs=20, patience=5):
         """
         Initialize the DL trainer with parameters.
         
@@ -166,8 +166,8 @@ class DLTrainer(BaseTrainer):
                 else:
                     patience_counter += 1
                 if patience_counter >= self.patience:
+                    print(f"Early stopping at epoch {epoch+1}")
                     break
-        
         return model_copy
     
     def predict_forward(self, data_before_gap, gap_size, model):

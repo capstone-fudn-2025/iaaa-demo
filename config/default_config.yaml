@@ -1,16 +1,17 @@
 # Default configuration for time series imputation
 
 # Data paths
-data_path: "data/raw/CAF003.csv"
-output_path: "outputs/data/CAF003_imputed.csv"
+data_name: "CAF003"
+data_path: "data/raw"
+output_path: "outputs/data"
 plots_dir: "outputs/plots"
 
 # Model configuration
-model_type: "dl"  # 'ml' for machine learning or 'dl' for deep learning
-model_name: "CNN1D"  # 'AdaBoost', 'SVR', or 'Attention'
+model_type: "ml"  # 'ml' for machine learning or 'dl' for deep learning
+model_name: "SVR"  # 'AdaBoost', 'SVR', 'XGBoost', 'Attention' or 'CNN1D'
 
 # Imputation parameters
-window_size: 7
+window_size: 30
 min_gap_size: 5
 combination_method: "wdbi"  # 'wdbi' or 'mean'
 
@@ -39,3 +40,5 @@ dl_params:
     num_epochs: 50
     learning_rate: 0.001
     weight_decay: 1e-5
+
+seed: 42

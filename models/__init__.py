@@ -1,13 +1,17 @@
 # Import models for easier access
 from models.ml.ada import AdaBoostModel
 from models.ml.svm import SVRModel
+from models.ml.xgboost import XGBoostModel
+
 from models.dl.attention import Attention
 from models.dl.cnn import CNN1D
+
 
 # Map of model names to model classes
 MODEL_MAP = {
     'AdaBoost': AdaBoostModel,
     'SVR': SVRModel,
+    'XGBoost': XGBoostModel,
     'Attention': Attention,
     'CNN1D': CNN1D,
     

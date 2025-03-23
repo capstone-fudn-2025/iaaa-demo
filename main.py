@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import yaml
 import pandas as pd
@@ -11,6 +12,7 @@ from models import get_model
 from utils.preprocessing import Preprocessing
 from utils.draw_fig import draw_fig
 from utils.metrics import calculate_metrics
+from utils.utils import seed_everything
 import matplotlib
 
 matplotlib.use('Agg')
@@ -58,7 +60,7 @@ def main():
     """Main function for time series imputation."""
     # Parse arguments
     args = parse_args()
-    
+
     # Load configuration
     config = load_config(args.config)
     
@@ -66,6 +68,7 @@ def main():
     config = update_config_with_args(config, args)
     
     # Extract configuration variables
+    data_name = config['data_name']
     data_path = config['data_path']
     output_path = config['output_path']
     plots_dir = config['plots_dir']
@@ -74,20 +77,25 @@ def main():
     window_size = config['window_size']
     min_gap_size = config['min_gap_size']
     combination_method = config['combination_method']
+    seed = config['seed']
     columns = config.get('columns', None)
     
+    seed_everything(seed)
+    print(f"Seed everything with seed: {seed}")
     # Add model name to output path
-    output_path = output_path.replace('.csv', f'_{model_name}.csv')
+    output_path = os.path.join(output_path, model_name, str(window_size), f"{data_name}_imputed.csv")
     # Create output directories
-    os.makedirs(plots_dir, exist_ok=True)
+    os.makedirs(os.path.join(plots_dir, model_name, str(window_size)), exist_ok=True)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     # Device for DL models
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Model name: {model_type} - {model_name}")
     print(f"Using device: {device}")
+    print(f"With window size: {window_size}")
     
     # Load data
-    dataframe = pd.read_csv(data_path)
+    dataframe = pd.read_csv(f"{data_path}/{data_name}.csv")
     
     # Drop unnecessary columns if they exist
     if 'Location' in dataframe.columns:
@@ -140,7 +148,7 @@ def main():
             imputed_data=imputed_data,
             original_data=univariate_raw_data[col].values,
             title=f"Gap Imputation - {combination_method} - {col} - Model: {model_name}",
-            save_path=f"{plots_dir}/{model_name}/imputation_{col}.png",
+            save_path=f"{plots_dir}/{model_name}/{window_size}/{col} - {combination_method}.png",
             is_show_fig=False
         )
         
@@ -152,4 +160,34 @@ def main():
     print(f"\nImputation completed and saved to {output_path}")
 
 if __name__ == "__main__":
-    main()
+    model_dict = {
+        'ml': ['AdaBoost', 'SVR', 'XGBoost'],
+        'dl': ['Attention', 'CNN1D']
+    }
+
+    # Save original sys.argv
+    original_argv = sys.argv.copy()
+    
+    for model_type, models in model_dict.items():
+        for model_name in models:
+            # Reset sys.argv to original
+            sys.argv = original_argv.copy()
+            
+            # Add or modify the model type and name arguments
+            if '--model_type' in sys.argv:
+                type_index = sys.argv.index('--model_type')
+                sys.argv[type_index + 1] = model_type
+            else:
+                sys.argv.extend(['--model_type', model_type])
+                
+            if '--model_name' in sys.argv:
+                name_index = sys.argv.index('--model_name')
+                sys.argv[name_index + 1] = model_name
+            else:
+                sys.argv.extend(['--model_name', model_name])
+            
+            # Run the main function with the modified arguments
+            print(f"\n\n{'='*50}")
+            print(f"Running with model_type={model_type}, model_name={model_name}")
+            print(f"{'='*50}\n")
+            main()
