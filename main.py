@@ -15,7 +15,7 @@ from utils.metrics import calculate_metrics
 from utils.utils import seed_everything
 import matplotlib
 
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 
 def parse_args():
     """Parse command line arguments."""

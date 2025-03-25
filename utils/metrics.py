@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 
@@ -65,14 +66,21 @@ def r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     Returns:
         R-squared value (higher is better)
     """
+    # Calculate means
     y_true_mean = np.mean(y_true)
-    y_pred_mean = np.mean(y_pred)
-    numerator = np.sum((y_true - y_true_mean) * (y_pred - y_pred_mean))
-    denominator = np.sqrt(np.sum((y_true - y_true_mean) * 2) * np.sum((y_pred - y_pred_mean) * 2))
-    # Avoid division by zero
-    if denominator == 0:
-        return 0.0
-    return numerator / denominator
+    
+    # Numerator: sum of (x_i - x_mean)(y_i - y_mean)
+    numerator = np.sum((y_true - y_true_mean) * (y_pred - np.mean(y_pred)))
+    
+    # Denominators: sqrt of sum of (x_i - x_mean)^2 and sum of (y_i - y_mean)^2
+    denominator_x = np.sqrt(np.sum((y_true - y_true_mean) ** 2))
+    denominator_y = np.sqrt(np.sum((y_pred - np.mean(y_pred)) ** 2))
+    
+    # Calculate Pearson correlation coefficient R
+    R = numerator / (denominator_x * denominator_y)
+    
+    # R-squared is the square of the Pearson correlation coefficient
+    return R ** 2
 
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """Calculate Root Mean Square Error.

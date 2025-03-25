@@ -140,4 +140,4 @@ checkpoints/
 
 *.ipynb
 
-# outputs/
+outputs/predicts

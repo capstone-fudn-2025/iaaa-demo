@@ -2,7 +2,7 @@ import matplotlib
 
 import matplotlib.pyplot as plt
 
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 
 def draw_fig(figsize=(15, 5), title="", save_path=None, is_show_fig=False, **kwargs):
     plt.figure(figsize=figsize)
