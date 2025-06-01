@@ -10,6 +10,8 @@ results_excel = pd.ExcelWriter("predicts_final_results.xlsx", engine='openpyxl')
 # define the path of the results
 predicts_results_folder_path = os.path.join("outputs", "predicts")
 
+final_results = []
+
 # get all folders in the predicts_results_folder_path
 for folder_data_name in os.listdir(predicts_results_folder_path):
     # get the path of the folder
@@ -48,6 +50,15 @@ for folder_data_name in os.listdir(predicts_results_folder_path):
     # create new sheet in the excel file
     df = pd.DataFrame(rows_results)
     df.to_excel(results_excel, sheet_name=folder_data_name, index=False)
+
+    # append the results to the final_results
+    final_results.extend(rows_results)
+    # add empty row
+    final_results.append({})
+
+# create new sheet in the excel file for all the results in the first sheet
+df = pd.DataFrame(final_results)
+df.to_excel(results_excel, sheet_name="All", index=False)
 
 # Use close() instead of save()
 results_excel.close()

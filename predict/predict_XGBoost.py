@@ -13,7 +13,7 @@ from utils.metrics import similarity, nmae, rmse, r2, fa2, fb, fsd
 
 # Constants
 METHOD = "XGBoost"
-DATA = "AdaBoost"
+DATA = "GRU"
 SAVE_RESULTS = True
 
 if SAVE_RESULTS:

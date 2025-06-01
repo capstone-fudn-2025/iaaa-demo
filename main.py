@@ -161,8 +161,8 @@ def main():
 
 if __name__ == "__main__":
     model_dict = {
-        'ml': ['AdaBoost', 'SVR', 'XGBoost'],
-        'dl': ['Attention', 'CNN1D']
+        # 'ml': ['AdaBoost', 'SVR', 'XGBoost'],
+        'dl': ['GRU']
     }
 
     # Save original sys.argv

@@ -5,6 +5,8 @@ from models.ml.xgboost import XGBoostModel
 
 from models.dl.attention import Attention
 from models.dl.cnn import CNN1D
+from models.dl.multi_attention import MultiHeadAttention
+from models.dl.gru import GRU
 
 
 # Map of model names to model classes
@@ -14,7 +16,8 @@ MODEL_MAP = {
     'XGBoost': XGBoostModel,
     'Attention': Attention,
     'CNN1D': CNN1D,
-    
+    'MultiHeadAttention': MultiHeadAttention,
+    'GRU': GRU
 }
 
 def get_model(model_name, **kwargs):

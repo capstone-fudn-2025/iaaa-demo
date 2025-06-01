@@ -14,7 +14,7 @@ from utils.metrics import similarity, nmae, rmse, r2, fa2, fb, fsd
 
 # Constants
 METHOD = "SVR"
-DATA = "SVR"
+DATA = "GRU"
 SAVE_RESULTS = True
 
 if SAVE_RESULTS:

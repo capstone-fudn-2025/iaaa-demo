@@ -35,6 +35,12 @@ dl_params:
   CNN1D:
     hidden_channels: 64
     kernel_size: 3
+  MultiHeadAttention:
+    num_heads: 8
+    hidden_channels: 64
+  GRU:
+    hidden_channels: 64
+    num_layers: 3
   training:
     batch_size: 32
     num_epochs: 50

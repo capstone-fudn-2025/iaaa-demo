@@ -18,7 +18,7 @@ from utils.metrics import similarity, nmae, rmse, r2, fa2, fb, fsd
 
 # Constants
 METHOD = "CNN1D"
-DATA = "AdaBoost"
+DATA = "GRU"
 SAVE_RESULTS = True
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EPOCHS = 100

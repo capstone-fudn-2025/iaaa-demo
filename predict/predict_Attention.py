@@ -18,8 +18,8 @@ from utils.metrics import similarity, nmae, rmse, r2, fa2, fb, fsd
 
 # Constants
 METHOD = "Attention"
-DATA = "SVR"
-SAVE_RESULTS = False
+DATA = "MultiHeadAttention"
+SAVE_RESULTS = True
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 EPOCHS = 100
 BATCH_SIZE = 16
